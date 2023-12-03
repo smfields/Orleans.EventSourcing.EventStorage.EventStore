@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Authors>Sam Fields</Authors>
+        <PackageProjectUrl>https://github.com/smfields/Orleans.EventSourcing.EventStorage.EventStore</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/smfields/Orleans.EventSourcing.EventStorage.EventStore</RepositoryUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Nullable>enable</Nullable>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <None Include="../../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Orleans.EventSourcing.EventStorage" Version="0.7.*" />
+    </ItemGroup>
+
+    <!-- Testing Specific configuiration goes here -->
+    <PropertyGroup Condition="'$(Configuration)' != 'Release'">
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <!-- Testing Specific files go here -->
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+        <Compile Remove="**\*.Tests.cs"/>
+        <Compile Remove="**\Testing\**\*"/>
+    </ItemGroup>
+
+    <!-- Testing Specific Dependencies go here -->
+    <ItemGroup Condition="'$(Configuration)' != 'Release'">
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
+        <PackageReference Include="Microsoft.Orleans.TestingHost" Version="7.2.3"/>
+        <PackageReference Include="NUnit" Version="3.13.3"/>
+        <PackageReference Include="NUnit3TestAdapter" Version="4.2.1"/>
+        <PackageReference Include="NUnit.Analyzers" Version="3.6.1"/>
+        <PackageReference Include="coverlet.collector" Version="6.0.0"/>
+        <PackageReference Include="Moq" Version="4.18.4"/>
+        <PackageReference Include="Moq.AutoMock" Version="3.5.0"/>
+    </ItemGroup>
+
+</Project>
