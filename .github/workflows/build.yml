@@ -1,0 +1,27 @@
+name: Build and Test
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Build (Test)
+      run: dotnet build -c Debug
+      
+    - name: Build (Release)
+      run: dotnet build -c Release
+      
+    - name: Test
+      run: dotnet test -c Debug --no-build --verbosity normal

@@ -1,0 +1,36 @@
+﻿# Builds a final release version and pushes to nuget.org 
+# whenever a release is published.
+# Requires: secrets.NUGET_API_KEY
+
+name: Release
+
+on:
+  release:
+    types: [released]
+
+env:
+  DOTNET_NOLOGO: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Pack
+        run: dotnet pack -c Release --output . -p:version=${GITHUB_REF#refs/*/v}
+
+      - name: Publish Nuget Package
+        run: dotnet nuget push "*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate
