@@ -1,4 +1,5 @@
-﻿using Orleans.TestingHost;
+﻿using EventStore.Client;
+using Orleans.TestingHost;
 
 namespace Orleans.EventSourcing.EventStorage.EventStore.Testing.TestGrains;
 
@@ -171,7 +172,10 @@ public class CounterGrainTests
         {
             siloBuilder
                 .AddEventStorageBasedLogConsistencyProviderAsDefault()
-                .AddEventStoreEventStorageAsDefault();
+                .AddEventStoreEventStorageAsDefault(opts =>
+                {
+                    opts.ClientSettings = EventStoreClientSettings.Create(EventStoreDbSetup.ConnectionString);
+                });
         }
     }
 }

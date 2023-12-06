@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
+﻿using EventStore.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.EventSourcing.EventStorage;
 using Orleans.EventSourcing.EventStorage.EventStore;
 using Orleans.TestingHost;
@@ -48,8 +48,14 @@ public class EventStoreEventStorageSiloBuilderExtensionsTests
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
-            siloBuilder.AddEventStoreEventStorage("EventStoreEventStorage");
-            siloBuilder.AddEventStoreEventStorageAsDefault();
+            siloBuilder.AddEventStoreEventStorage("EventStoreEventStorage", opts =>
+            {
+                opts.ClientSettings = EventStoreClientSettings.Create(EventStoreDbSetup.ConnectionString);
+            });
+            siloBuilder.AddEventStoreEventStorageAsDefault(opts =>
+            {
+                opts.ClientSettings = EventStoreClientSettings.Create(EventStoreDbSetup.ConnectionString);
+            });
         }
     }
 }

@@ -77,6 +77,12 @@ public static class EventStoreEventStorageSiloBuilderExtensions
         {
             configureOptions?.Invoke(services.AddOptions<EventStoreOptions>(name));
             services.ConfigureNamedOptionForLogging<EventStoreOptions>(name);
+            services.AddTransient<IConfigurationValidator>(
+                sp => new EventStoreOptionsValidator(
+                    sp.GetService<IOptionsMonitor<EventStoreOptions>>()!.Get(name),
+                    name
+                )
+            );
 
             const string defaultProviderName = EventStorageConstants.DEFAULT_EVENT_STORAGE_PROVIDER_NAME;
             if (string.Equals(name, defaultProviderName, StringComparison.Ordinal))
