@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using EventStore.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.EventSourcing.EventStorage.EventStore.Options;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -11,24 +13,28 @@ namespace Orleans.EventSourcing.EventStorage.EventStore;
 /// Event storage provider that stores events using an EventStoreDB event stream.
 /// </summary>
 [DebuggerDisplay("EventStore:{" + nameof(_name) + "}")]
-public class EventStoreEventStorage : IEventStorage
+public class EventStoreEventStorage : IEventStorage, ILifecycleParticipant<ISiloLifecycle>
 {
     private readonly string _name;
+    private readonly string _serviceId;
     private readonly EventStoreOptions _options;
     private readonly ILogger<EventStoreEventStorage> _logger;
     private readonly IGrainStorageSerializer _storageSerializer;
+    private EventStoreClient? _eventStoreClient;
 
     public EventStoreEventStorage(
         string name,
         EventStoreOptions options,
         ILogger<EventStoreEventStorage> logger,
-        IGrainStorageSerializer defaultStorageSerializer
+        IGrainStorageSerializer defaultStorageSerializer,
+        IOptions<ClusterOptions> clusterOptions
     )
     {
         _name = name;
         _options = options;
         _logger = logger;
         _storageSerializer = _options.GrainStorageSerializer ?? defaultStorageSerializer;
+        _serviceId = clusterOptions.Value.ServiceId;
     }
 
     /// <inheritdoc />
@@ -48,9 +54,7 @@ public class EventStoreEventStorage : IEventStorage
             throw new ArgumentOutOfRangeException(nameof(maxCount), "Max Count cannot be less than 0");
         }
         
-        var client = new EventStoreClient(_options.ClientSettings);
-
-        var results = client.ReadStreamAsync(
+        var results = _eventStoreClient!.ReadStreamAsync(
             Direction.Forwards,
             grainId.ToString(),
             revision: (ulong) version,
@@ -80,8 +84,6 @@ public class EventStoreEventStorage : IEventStorage
             throw new ArgumentOutOfRangeException(nameof(expectedVersion), "Expected version cannot be less than 0");
         }
         
-        var client = new EventStoreClient(_options.ClientSettings);
-
         var eventsToAppend = events.Select(
             x => new EventData(Uuid.NewUuid(), x.GetType().FullName!, _storageSerializer.Serialize(x))
         );
@@ -90,7 +92,7 @@ public class EventStoreEventStorage : IEventStorage
 
         try
         {
-            await client.AppendToStreamAsync(
+            await _eventStoreClient!.AppendToStreamAsync(
                 grainId.ToString(),
                 expectedRevision: expectedRevision,
                 eventsToAppend
@@ -102,5 +104,61 @@ public class EventStoreEventStorage : IEventStorage
         }
         
         return true;
+    }
+
+    public void Participate(ISiloLifecycle lifecycle)
+    {
+        var name = OptionFormattingUtilities.Name<EventStoreEventStorage>(_name);
+        lifecycle.Subscribe(name, _options.InitStage, Init, Close);
+    }
+
+    private async Task Init(CancellationToken cancellationToken)
+    {
+        var timer = Stopwatch.StartNew();
+
+        try
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "EventStoreEventStorage {Name} is initializing: ServiceId={ServiceId}",
+                    _name,
+                    _serviceId
+                );
+            }
+
+            _eventStoreClient = await _options.CreateClient(_options.ClientSettings);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                timer.Stop();
+                _logger.LogDebug(
+                    "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms",
+                    _name,
+                    _serviceId,
+                    timer.Elapsed.TotalMilliseconds.ToString("0.00")
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            timer.Stop();
+            _logger.LogError(
+                ex,
+                "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms.",
+                _name,
+                _serviceId,
+                timer.Elapsed.TotalMilliseconds.ToString("0.00")
+            );
+
+            throw new EventStoreEventStorageException($"{ex.GetType()}: {ex.Message}");
+        }
+    }
+
+    private async Task Close(CancellationToken cancellationToken)
+    {
+        if (_eventStoreClient is null) return;
+
+        await _eventStoreClient.DisposeAsync();
     }
 }

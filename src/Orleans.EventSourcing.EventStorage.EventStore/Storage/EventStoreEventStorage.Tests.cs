@@ -45,6 +45,27 @@ public class EventStoreEventStorageTests
     }
 
     [Test]
+    public async Task Many_events_can_be_added_sequentially()
+    {
+        const int numEvents = 1_000;
+        var grainId = GenerateGrainId();
+        var sampleEvents = Enumerable
+            .Range(0, numEvents)
+            .Select(i => new SampleEvent(i))
+            .ToList();
+
+        var expectedVersion = 0;
+        foreach (var sampleEvent in sampleEvents)
+        {
+            await EventStoreEventStorage.AppendEventsToStorage(grainId, [sampleEvent], expectedVersion++);
+        }
+
+        var eventStream = EventStoreEventStorage.ReadEventsFromStorage<SampleEvent>(grainId);
+        var eventList = await eventStream.ToListAsync();
+        Assert.That(eventList, Has.Count.EqualTo(numEvents));
+    }
+
+    [Test]
     public async Task Retrieved_events_have_same_type_as_stored_events()
     {
         var grainId = GenerateGrainId();

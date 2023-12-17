@@ -11,7 +11,9 @@ public class EventStoreDbSetup
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        var container = new EventStoreDbBuilder().Build();
+        var container = new EventStoreDbBuilder()
+            .WithImage("eventstore/eventstore:lts")
+            .Build();
         await container.StartAsync();
 
         ConnectionString = container.GetConnectionString();

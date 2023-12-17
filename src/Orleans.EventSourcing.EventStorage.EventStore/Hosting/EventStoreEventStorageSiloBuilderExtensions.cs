@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.EventSourcing.EventStorage;
 using Orleans.EventSourcing.EventStorage.EventStore;
+using Orleans.Runtime;
 
 // ReSharper disable once CheckNamespace
 namespace Orleans.Hosting;
@@ -93,6 +94,7 @@ public static class EventStoreEventStorageSiloBuilderExtensions
             }
 
             services.AddKeyedSingleton(name, EventStoreStorageFactory.Create);
+            services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(s => (ILifecycleParticipant<ISiloLifecycle>)s.GetRequiredKeyedService<IEventStorage>(name));
         });
     }
 }
