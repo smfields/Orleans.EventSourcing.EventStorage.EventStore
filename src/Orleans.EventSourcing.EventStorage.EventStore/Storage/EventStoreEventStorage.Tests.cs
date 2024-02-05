@@ -110,6 +110,18 @@ public class EventStoreEventStorageTests
         Assert.That(eventList, Is.Empty);
     }
 
+    [Test]
+    public async Task Retrieved_events_have_correct_version_numbers()
+    {
+        var grainId = GenerateGrainId();
+
+        await EventStoreEventStorage.AppendEventsToStorage(grainId, new[] { new SampleEvent() }, 0);
+        var eventStream = EventStoreEventStorage.ReadEventsFromStorage<object>(grainId, 0, 1);
+        var eventList = await eventStream.ToListAsync();
+
+        Assert.That(eventList.First().Version, Is.EqualTo(1));
+    }
+
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {

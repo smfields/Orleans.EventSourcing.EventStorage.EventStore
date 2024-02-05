@@ -68,7 +68,7 @@ public class EventStoreEventStorage : IEventStorage, ILifecycleParticipant<ISilo
         
         await foreach (var entry in results)
         {
-            yield return new EventRecord<TEvent>(_storageSerializer.Deserialize<TEvent>(entry.Event.Data), (int)entry.Event.EventNumber.ToInt64());
+            yield return new EventRecord<TEvent>(_storageSerializer.Deserialize<TEvent>(entry.Event.Data), (int)entry.Event.EventNumber.ToInt64() + 1);
         }
     }
 
